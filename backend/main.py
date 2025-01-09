@@ -2,9 +2,8 @@ import argparse
 import time
 from datetime import timedelta
 from loguru import logger
-from app.config.config import Config
-from app.services.planning_checker import PlanningChecker
-from app.services.scraping_service import ScrapingService
+from backend.services.planning_checker import PlanningChecker
+from backend.services.scraping_service import ScrapingService
 
 
 def parse_args():
