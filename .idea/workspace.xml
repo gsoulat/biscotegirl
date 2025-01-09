@@ -1,30 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="6d4f1334-3d4f-463a-aefd-979deaaca5bc" name="Changes" comment="" />
+    <list default="true" id="6d4f1334-3d4f-463a-aefd-979deaaca5bc" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/api/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/api/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/services/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/services/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/services/discord_notifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/services/discord_notifier.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/services/planning_checker.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/services/planning_checker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/services/scraping_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/services/scraping_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ReservationInterface.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ReservationInterface.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/index.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tailwind.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tailwind.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/vite.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ruff.toml" beforeDir="false" afterPath="$PROJECT_DIR$/ruff.toml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="HTML File" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "gsoulat"
+  }
 }]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/gsoulat/biscotegirl.git",
+    "accountId": "0b183d07-2c21-4868-9fac-f9c872313e92"
+  }
+}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="2rLV79Poi2EdtEYQOOWcNvJgHHP" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "Python.init_db.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.planning_checker.executor": "Run",
+    "Python.script_b.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main"
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/guillaume/Documents/workplace/Perso/Scraping/nungesser_ia/backend/scripts",
+    "run.code.analysis.last.selected.profile": "pProject Default"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/backend/scripts" />
+      <recent name="$PROJECT_DIR$/app/web" />
+      <recent name="$PROJECT_DIR$/app/api" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/frontend/src/components" />
+      <recent name="$PROJECT_DIR$/backend" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/images" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>

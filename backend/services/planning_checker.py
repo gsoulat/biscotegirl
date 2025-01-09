@@ -4,9 +4,10 @@ from typing import List, Dict, Tuple, Optional
 import tenacity
 from loguru import logger
 from playwright.sync_api import sync_playwright, TimeoutError
-from app.config.config import Config
-from app.services.database import Database
-from app.services.discord_notifier import DiscordNotifier
+from backend.config.config import Config
+from backend.services.database import Database
+from backend.services.discord_notifier import DiscordNotifier
+from tqdm import tqdm
 
 
 class PlanningChecker:
@@ -66,6 +67,19 @@ class PlanningChecker:
                 f"⚠️ {self.error_count} erreurs consécutives détectées. "
                 f"Passage en mode récupération ({retry_interval}s)"
             )
+            # Ajout de la barre de progression
+            for _ in tqdm(range(retry_interval),
+                          desc="⏳ Temps restant",
+                          bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}s',
+                          ncols=75):
+                time.sleep(1)
+        else:
+            # Pour les délais courts, on utilise aussi tqdm mais avec un format plus compact
+            for _ in tqdm(range(retry_interval),
+                          desc="⏳ Attente",
+                          bar_format='{desc}: {n_fmt}/{total_fmt}s',
+                          ncols=50):
+                time.sleep(1)
 
         return retry_interval
 
@@ -246,10 +260,15 @@ class PlanningChecker:
             )
             activities = []
 
+            # Date actuelle pour avoir le jour en français
+            current_date = datetime.now()
+
             for item in planning_items:
                 try:
                     activity = self._extract_activity_info(item)
                     if activity:
+                        # Si c'est une méthode statique
+                        activity['weekday'] = self._convert_day_to_french(current_date)
                         activities.append(activity)
                         self._log_activity(activity)
                 except Exception as e:
@@ -344,6 +363,20 @@ class PlanningChecker:
             logger.info("✨ Nettoyage terminé")
         except Exception as e:
             logger.error(f"Erreur nettoyage: {str(e)}")
+
+    @staticmethod
+    def _convert_day_to_french(date_obj: datetime) -> str:
+        """Convertit un jour en français"""
+        weekday_map = {
+            0: 'lundi',
+            1: 'mardi',
+            2: 'mercredi',
+            3: 'jeudi',
+            4: 'vendredi',
+            5: 'samedi',
+            6: 'dimanche'
+        }
+        return weekday_map[date_obj.weekday()]
 
     def periodic_check(self) -> None:
         while True:

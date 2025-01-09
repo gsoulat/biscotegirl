@@ -10,6 +10,17 @@ class Database:
         self.db_path = Path(db_path)
         self.initialize_db()
 
+    def execute(self, query: str, params: tuple = ()) -> None:
+        """Exécute une requête SQL"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Erreur lors de l'exécution de la requête SQL : {str(e)}")
+            raise
+
     def initialize_db(self):
         """Initialise la base de données et crée les tables si elles n'existent pas"""
         try:
@@ -86,18 +97,7 @@ class Database:
                 cursor.execute("""
                     SELECT id, weekday, start_time, activity, room
                     FROM planning 
-                    WHERE is_full = FALSE
-                    ORDER BY 
-                        CASE weekday 
-                            WHEN 'lundi' THEN 1
-                            WHEN 'mardi' THEN 2
-                            WHEN 'mercredi' THEN 3
-                            WHEN 'jeudi' THEN 4
-                            WHEN 'vendredi' THEN 5
-                            WHEN 'samedi' THEN 6
-                            WHEN 'dimanche' THEN 7
-                        END,
-                        start_time
+                    ORDER BY id
                 """)
                 return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
@@ -122,3 +122,64 @@ class Database:
         except Exception as e:
             logger.error(f"Erreur lors de l'ajout de la réservation: {str(e)}")
             return False
+
+    def get_today_check_status(self) -> bool:
+        """Récupère le statut de vérification pour aujourd'hui"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT EXISTS (
+                        SELECT 1 
+                        FROM checking_days 
+                        WHERE date = date('now')
+                    ) as checked
+                """)
+                return bool(cursor.fetchone()[0])
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération du statut: {str(e)}")
+            return False
+
+    def get_today_planning_status(self) -> bool:
+        """Récupère le status du planning pour aujourd'hui"""
+        today = datetime.now().strftime("%Y-%m-%d")
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT is_planning FROM checking_days WHERE date = ?",
+                    (today,)
+                )
+                result = cursor.fetchone()
+
+                if not result:
+                    cursor.execute(
+                        "INSERT INTO checking_days (date, is_planning) VALUES (?, ?)",
+                        (today, False)
+                    )
+                    conn.commit()
+                    return False
+
+            return bool(result[0])
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération du statut: {str(e)}")
+            return False
+
+    def set_planning_checked(self) -> None:
+        """Marque le planning comme vérifié pour aujourd'hui"""
+        today = datetime.now().strftime("%Y-%m-%d")
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO checking_days (date, is_planning) 
+                    VALUES (?, ?) 
+                    ON CONFLICT(date) DO UPDATE SET is_planning = ?
+                    """,
+                    (today, True, True)
+                )
+                conn.commit()
+                logger.info("Status de vérification mis à jour")
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour du statut: {str(e)}")

@@ -2,9 +2,9 @@ from datetime import datetime, timedelta
 import time
 from typing import List, Dict
 from loguru import logger
-from app.config.config import Config
-from app.services.planning_checker import PlanningChecker
-from app.services.database import Database
+from backend.config.config import Config
+from backend.services.planning_checker import PlanningChecker
+from backend.services.database import Database
 
 
 class ScrapingService(PlanningChecker):

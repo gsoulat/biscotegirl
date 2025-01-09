@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Dict
 import requests
 from loguru import logger
-from app.config.config import Config
+from backend.config.config import Config
 
 class WeatherService:
     def __init__(self, api_key: str):
@@ -154,4 +154,37 @@ class DiscordNotifier:
 
         except Exception as e:
             self.logger.error(f"❌ Erreur lors de l'envoi de la notification: {str(e)}")
+            self.logger.exception("Détails de l'erreur:")
+
+    def send_notification_recovery(self) -> None:
+        """Envoie une notification quand le système est rétabli"""
+        try:
+            self.logger.info("Préparation de la notification de récupération Discord...")
+
+            message = [
+                "✅ **SYSTÈME RÉTABLI** ✅",
+                "\n🛠️ **Le système de vérification fonctionne à nouveau:**",
+                "• Les erreurs ont été résolues",
+                "• Les vérifications reprennent normalement",
+                "\n-------------------",
+                "Le système continue son travail normalement 🚀"
+            ]
+
+            payload = {
+                "content": "\n".join(message),
+                "username": "BiscoteGirl",
+                "avatar_url": Config.BISCOTEGIRL_AVATAR_URL
+            }
+
+            response = requests.post(self.webhook_url, json=payload)
+
+            if response.status_code == 204:
+                self.logger.info("✅ Notification de récupération Discord envoyée avec succès")
+            else:
+                self.logger.error(
+                    f"❌ Erreur lors de l'envoi de la notification de récupération ({response.status_code}): {response.text}"
+                )
+
+        except Exception as e:
+            self.logger.error(f"❌ Erreur lors de l'envoi de la notification de récupération: {str(e)}")
             self.logger.exception("Détails de l'erreur:")
