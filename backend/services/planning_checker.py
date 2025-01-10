@@ -80,15 +80,41 @@ class PlanningChecker:
         return retry_interval
 
     def should_check_planning(self) -> bool:
-        """Vérifie si le planning doit être vérifié aujourd'hui"""
+        """Vérifie si le planning doit être vérifié aujourd'hui et si on est dans la plage horaire"""
         now = datetime.now()
+        current_time = now.time()
+
+        # Vérification de la plage horaire
+        if not (Config.CHECK_START_TIME <= current_time <= Config.CHECK_END_TIME):
+            next_check = now.replace(
+                hour=Config.CHECK_START_TIME.hour,
+                minute=Config.CHECK_START_TIME.minute,
+                second=0
+            )
+            if current_time > Config.CHECK_END_TIME:
+                next_check += timedelta(days=1)
+
+            wait_time = (next_check - now).total_seconds()
+            logger.info(
+                f"⏰ Hors plage horaire ({Config.CHECK_START_TIME.strftime('%H:%M')} - {Config.CHECK_END_TIME.strftime('%H:%M')})")
+            logger.info(
+                f"💤 Reprise des vérifications à {next_check.strftime('%H:%M')} (dans {wait_time / 3600:.1f} heures)")
+            return False
+
+        # Vérification si déjà vérifié aujourd'hui
         is_checked = self.db.get_today_check_status()
         if is_checked:
             logger.info("✅ Planning déjà vérifié aujourd'hui")
-            tomorrow = now.replace(hour=7, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            tomorrow = now.replace(
+                hour=Config.CHECK_START_TIME.hour,
+                minute=Config.CHECK_START_TIME.minute,
+                second=0
+            ) + timedelta(days=1)
             wait_time = (tomorrow - now).total_seconds()
-            logger.info(f"⏰ Reprise des vérifications demain à 7h (dans {wait_time / 3600:.1f} heures)")
+            logger.info(
+                f"⏰ Reprise des vérifications demain à {Config.CHECK_START_TIME.strftime('%H:%M')} (dans {wait_time / 3600:.1f} heures)")
             return False
+
         return True
 
     async def initialize_browser(self) -> None:
