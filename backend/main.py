@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import time
 from datetime import timedelta
 from loguru import logger
@@ -42,7 +43,7 @@ def format_duration(seconds: float) -> str:
     return " ".join(parts)
 
 
-def main():
+async def async_main():
     start_time = time.time()
     args = parse_args()
 
@@ -50,11 +51,11 @@ def main():
         if args.scraping:
             logger.info("Mode scraping activé - Démarrage du scraping du planning...")
             scraper = ScrapingService(logger, headless=args.headless)
-            scraper.scrape_planning()
+            await scraper.scrape_planning()
         else:
             logger.info("Mode normal - Démarrage de la vérification du planning...")
             checker = PlanningChecker(logger, headless=args.headless)
-            checker.periodic_check()
+            await checker.periodic_check()
 
     except KeyboardInterrupt:
         logger.info("Arrêt manuel du programme")
@@ -63,6 +64,10 @@ def main():
     finally:
         execution_time = time.time() - start_time
         logger.info(f"Temps d'exécution total: {format_duration(execution_time)}")
+
+
+def main():
+    asyncio.run(async_main())
 
 
 if __name__ == "__main__":

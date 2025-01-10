@@ -125,17 +125,30 @@ class Database:
 
     def get_today_check_status(self) -> bool:
         """Récupère le statut de vérification pour aujourd'hui"""
+        today = datetime.now().strftime("%Y-%m-%d")
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT EXISTS (
-                        SELECT 1 
-                        FROM checking_days 
-                        WHERE date = date('now')
-                    ) as checked
-                """)
-                return bool(cursor.fetchone()[0])
+                cursor.execute(
+                    "SELECT is_planning FROM checking_days WHERE date = ? AND is_planning = 1",
+                    (today,)
+                )
+                result = cursor.fetchone()
+
+                if not result:
+                    # Si pas d'entrée pour aujourd'hui ou is_planning = 0, on crée/met à jour l'entrée
+                    cursor.execute(
+                        """
+                        INSERT INTO checking_days (date, is_planning) 
+                        VALUES (?, ?) 
+                        ON CONFLICT(date) DO UPDATE SET is_planning = ?
+                        """,
+                        (today, False, False)
+                    )
+                    conn.commit()
+                    return False
+
+                return bool(result[0])
         except Exception as e:
             logger.error(f"Erreur lors de la récupération du statut: {str(e)}")
             return False
