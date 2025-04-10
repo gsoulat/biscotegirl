@@ -1,14 +1,16 @@
-from datetime import datetime, timedelta
 import asyncio
+import sqlite3
 import time
-from typing import List, Dict, Tuple, Optional
-import tenacity
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+
 from loguru import logger
-from playwright.async_api import Playwright, async_playwright, TimeoutError
-from backend.config.config import Config 
+from playwright.async_api import TimeoutError, async_playwright
+from tqdm import tqdm
+
+from backend.config.config import Config
 from backend.services.database import Database
 from backend.services.discord_notifier import DiscordNotifier
-from tqdm import tqdm
 
 
 class PlanningChecker:
@@ -46,17 +48,14 @@ class PlanningChecker:
         )
 
         should_notify = (
-                self.error_count == 1 or
-                self.error_count == self.max_consecutive_errors
+            self.error_count == 1 or self.error_count == self.max_consecutive_errors
         )
 
         if should_notify and Config.DISCORD_ENABLED:
             error_key = f"{type(error).__name__}:{str(error)}"
             if error_key != self.last_error_notified:
                 await self.discord_notifier.send_error_notification(
-                    str(error),
-                    self.error_count,
-                    retry_interval
+                    str(error), self.error_count, retry_interval
                 )
                 self.last_error_notified = error_key
 
@@ -65,16 +64,20 @@ class PlanningChecker:
                 f"⚠️ {self.error_count} erreurs consécutives détectées. "
                 f"Passage en mode récupération ({retry_interval}s)"
             )
-            for _ in tqdm(range(retry_interval),
-                         desc="⏳ Temps restant",
-                         bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}s',
-                         ncols=75):
+            for _ in tqdm(
+                range(retry_interval),
+                desc="⏳ Temps restant",
+                bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}s",
+                ncols=75,
+            ):
                 await asyncio.sleep(1)
         else:
-            for _ in tqdm(range(retry_interval),
-                         desc="⏳ Attente",
-                         bar_format='{desc}: {n_fmt}/{total_fmt}s',
-                         ncols=50):
+            for _ in tqdm(
+                range(retry_interval),
+                desc="⏳ Attente",
+                bar_format="{desc}: {n_fmt}/{total_fmt}s",
+                ncols=50,
+            ):
                 await asyncio.sleep(1)
 
         return retry_interval
@@ -89,16 +92,18 @@ class PlanningChecker:
             next_check = now.replace(
                 hour=Config.CHECK_START_TIME.hour,
                 minute=Config.CHECK_START_TIME.minute,
-                second=0
+                second=0,
             )
             if current_time > Config.CHECK_END_TIME:
                 next_check += timedelta(days=1)
 
             wait_time = (next_check - now).total_seconds()
             logger.info(
-                f"⏰ Hors plage horaire ({Config.CHECK_START_TIME.strftime('%H:%M')} - {Config.CHECK_END_TIME.strftime('%H:%M')})")
+                f"⏰ Hors plage horaire ({Config.CHECK_START_TIME.strftime('%H:%M')} - {Config.CHECK_END_TIME.strftime('%H:%M')})"
+            )
             logger.info(
-                f"💤 Reprise des vérifications à {next_check.strftime('%H:%M')} (dans {wait_time / 3600:.1f} heures)")
+                f"💤 Reprise des vérifications à {next_check.strftime('%H:%M')} (dans {wait_time / 3600:.1f} heures)"
+            )
             return False
 
         # Vérification si déjà vérifié aujourd'hui
@@ -108,11 +113,12 @@ class PlanningChecker:
             tomorrow = now.replace(
                 hour=Config.CHECK_START_TIME.hour,
                 minute=Config.CHECK_START_TIME.minute,
-                second=0
+                second=0,
             ) + timedelta(days=1)
             wait_time = (tomorrow - now).total_seconds()
             logger.info(
-                f"⏰ Reprise des vérifications demain à {Config.CHECK_START_TIME.strftime('%H:%M')} (dans {wait_time / 3600:.1f} heures)")
+                f"⏰ Reprise des vérifications demain à {Config.CHECK_START_TIME.strftime('%H:%M')} (dans {wait_time / 3600:.1f} heures)"
+            )
             return False
 
         return True
@@ -138,7 +144,10 @@ class PlanningChecker:
 
             self.page = await self.context.new_page()
             self.page.set_default_timeout(Config.PAGE_TIMEOUT)
-            self.page.on("dialog", lambda dialog: asyncio.create_task(self._handle_dialog(dialog)))
+            self.page.on(
+                "dialog",
+                lambda dialog: asyncio.create_task(self._handle_dialog(dialog)),
+            )
 
             logger.info("Navigateur initialisé avec succès")
         except Exception as e:
@@ -209,7 +218,9 @@ class PlanningChecker:
             )
             logger.info(f"Sélection du mois {target_month_fr}")
 
-            await self.page.click(Config.SELECTORS["month_option"].format(target_month_fr))
+            await self.page.click(
+                Config.SELECTORS["month_option"].format(target_month_fr)
+            )
             await self.page.click(Config.SELECTORS["ok_button_date"])
             await self.page.wait_for_timeout(1000)
         except Exception as e:
@@ -245,7 +256,7 @@ class PlanningChecker:
             return False
 
     async def check_activities(self) -> Tuple[bool, List[Dict]]:
-        """Vérifie les activités disponibles"""
+        """Vérifie les activités disponibles et tente de faire des réservations si nécessaire"""
         try:
             await self.page.wait_for_load_state("networkidle")
             await self.page.wait_for_selector(
@@ -262,12 +273,13 @@ class PlanningChecker:
             )
             activities = []
             current_date = datetime.now()
+            target_date = current_date + timedelta(days=Config.TARGET_DAY_OFFSET)
 
             for item in planning_items:
                 try:
                     activity = await self._extract_activity_info(item)
                     if activity:
-                        activity['weekday'] = self._convert_day_to_french(current_date)
+                        activity["weekday"] = self._convert_day_to_french(target_date)
                         activities.append(activity)
                         self._log_activity(activity)
                 except Exception as e:
@@ -276,6 +288,9 @@ class PlanningChecker:
 
             if activities:
                 self._log_activities_stats(activities)
+
+                # Vérifier si des réservations sont à faire
+                await self.check_reservations_for_user(activities, target_date)
 
             return bool(activities), activities
 
@@ -327,8 +342,8 @@ class PlanningChecker:
                 return None
 
             path = (
-                    Config.LOGS_DIR
-                    / f"{prefix}_screenshot_{time.strftime('%Y%m%d-%H%M%S')}.png"
+                Config.LOGS_DIR
+                / f"{prefix}_screenshot_{time.strftime('%Y%m%d-%H%M%S')}.png"
             )
             await self.page.screenshot(path=str(path))
             logger.info(f"Screenshot: {path}")
@@ -356,14 +371,15 @@ class PlanningChecker:
     def _convert_day_to_french(date_obj: datetime) -> str:
         """Convertit un jour en français"""
         weekday_map = {
-            0: 'lundi',
-            1: 'mardi',
-            2: 'mercredi',
-            3: 'jeudi',
-            4: 'vendredi',
-            5: 'samedi',
-            6: 'dimanche'
+            0: "lundi",
+            1: "mardi",
+            2: "mercredi",
+            3: "jeudi",
+            4: "vendredi",
+            5: "samedi",
+            6: "dimanche",
         }
+        return weekday_map[date_obj.weekday()]
 
     def _log_activity(self, activity: Dict) -> None:
         """Log les détails d'une activité"""
@@ -387,12 +403,178 @@ class PlanningChecker:
             f"📊 Stats: {booked} réservé(s), {full} complet(s), {available} disponible(s)"
         )
 
+    async def check_reservations_for_user(self, activities, target_date):
+        """Vérifie si des réservations sont à faire pour la date cible"""
+        try:
+            # Récupère le jour de la semaine (lundi, mardi, etc.)
+            day_of_week = target_date.strftime("%A").lower()
+            weekday_fr = self._convert_day_to_french(target_date)
+            self.logger.info(f"Vérification des réservations pour {weekday_fr}")
+
+            # Récupère les réservations souhaitées pour ce jour
+            with sqlite3.connect(Config.DATABASE_PATH) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT rw.day, rw.activity_name, u.email, u.password, u.discord_name, u.id as user_id
+                    FROM reservations rw
+                    JOIN users u ON rw.user_id = u.id
+                    WHERE rw.day = ?
+                """,
+                    (weekday_fr,),
+                )
+
+                wanted_reservations = [dict(row) for row in cursor.fetchall()]
+
+            if not wanted_reservations:
+                self.logger.info(f"Aucune réservation souhaitée pour {weekday_fr}")
+                return
+
+            self.logger.info(
+                f"Trouvé {len(wanted_reservations)} réservations souhaitées pour {weekday_fr}"
+            )
+
+            # Pour chaque réservation souhaitée
+            for reservation in wanted_reservations:
+                # Trouve l'activité correspondante
+                matching_activities = [
+                    a
+                    for a in activities
+                    if a["activity"].upper() == reservation["activity"].upper()
+                ]
+
+                if not matching_activities:
+                    self.logger.warning(
+                        f"Activité {reservation['activity']} non trouvée pour {weekday_fr}"
+                    )
+                    continue
+
+                activity = matching_activities[0]
+
+                # Si l'activité est déjà complète, passer
+                if activity.get("is_full", False):
+                    self.logger.warning(
+                        f"Activité {activity['activity']} est complète, impossible de réserver"
+                    )
+                    continue
+
+                # Si l'activité est déjà réservée, passer
+                if activity.get("is_booked", False):
+                    self.logger.info(f"Activité {activity['activity']} déjà réservée")
+                    continue
+
+                # Réserver l'activité
+                await self.make_reservation(activity, reservation, target_date)
+
+        except Exception as e:
+            self.logger.error(
+                f"Erreur lors de la vérification des réservations: {str(e)}"
+            )
+            self.logger.exception("Détail de l'erreur:")
+
+        async def make_reservation(self, activity, user_info, target_date):
+            """Réserve une activité pour un utilisateur"""
+            try:
+                self.logger.info(
+                    f"Tentative de réservation pour {user_info['discord_name']}: {activity['activity']} à {activity['start_time']}"
+                )
+
+                # Si nous ne sommes pas connectés avec le bon utilisateur, on se reconnecte
+                if Config.EMAIL != user_info["email"]:
+                    await self.cleanup()
+                    await self.initialize_browser()
+                    if not await self.login(
+                        Config.LOGIN_URL, user_info["email"], user_info["password"]
+                    ):
+                        self.logger.error(
+                            f"Échec de connexion pour {user_info['email']}"
+                        )
+                        return
+
+                # Naviguer vers la page de planning
+                await self.navigate_to_page(Config.PLANNING_URL)
+
+                # Sélectionner la date
+                await self.select_month(target_date)
+                if not await self.select_date(target_date):
+                    self.logger.error(
+                        f"Impossible de sélectionner la date {target_date}"
+                    )
+                    return
+
+                # Rechercher l'activité correspondante
+                activities_elements = await self.page.query_selector_all(
+                    "ion-item.pl-evt"
+                )
+
+                for item in activities_elements:
+                    act_name_element = await item.query_selector(".pl-evt-label")
+                    act_time_element = await item.query_selector(".pl-evt-start")
+
+                    if not act_name_element or not act_time_element:
+                        continue
+
+                    act_name = await act_name_element.inner_text()
+                    act_time = await act_time_element.inner_text()
+
+                    if (
+                        act_name.upper() == activity["activity"].upper()
+                        and act_time == activity["start_time"]
+                    ):
+                        self.logger.info(f"Activité trouvée: {act_name} à {act_time}")
+
+                        # Vérifier si un bouton de réservation est disponible
+                        book_button = await item.query_selector("button")
+
+                        if not book_button:
+                            self.logger.warning("Bouton de réservation non trouvé")
+                            return
+
+                        # Cliquer sur le bouton de réservation
+                        await book_button.click()
+                        self.logger.info("Clic sur le bouton de réservation")
+
+                        # Attendre la confirmation
+                        await self.page.wait_for_timeout(2000)
+
+                        # Vérifier si la réservation a réussi
+                        is_booked = (
+                            await item.query_selector(".pl-evt-status.booked")
+                            is not None
+                        )
+
+                        if is_booked:
+                            self.logger.info(
+                                f"Réservation réussie pour {activity['activity']} à {activity['start_time']}"
+                            )
+                            # Envoyer une notification Discord personnalisée
+                            formatted_date = target_date.strftime("%d/%m/%Y")
+                            message = f"🎯 Réservation effectuée pour **{user_info['discord_name']}** !\n\n📅 **{formatted_date}** à **{activity['start_time']}**\n💪 Activité: **{activity['activity']}**\n🏋️ Salle: **{activity['room']}**"
+
+                            await self.discord_notifier.send_notification_custom(
+                                message, user_info["discord_name"]
+                            )
+                        else:
+                            self.logger.warning("La réservation semble avoir échoué")
+                        return
+
+                self.logger.warning(
+                    f"Activité {activity['activity']} à {activity['start_time']} non trouvée parmi les éléments de la page"
+                )
+
+            except Exception as e:
+                self.logger.error(f"Erreur lors de la réservation: {str(e)}")
+                self.logger.exception("Détail de l'erreur:")
+
     async def periodic_check(self) -> None:
         """Vérifie périodiquement le planning"""
         while True:
             try:
                 if not self.should_check_planning():
-                    await asyncio.sleep(60)  # Attendre une minute avant de vérifier à nouveau
+                    await asyncio.sleep(
+                        60
+                    )  # Attendre une minute avant de vérifier à nouveau
                     continue
 
                 # Réinitialisation complète du navigateur à chaque itération
@@ -404,19 +586,25 @@ class PlanningChecker:
                 # Initialiser une nouvelle instance du navigateur
                 await self.initialize_browser()
 
-                if not await self.login(Config.LOGIN_URL, Config.EMAIL, Config.PASSWORD):
+                if not await self.login(
+                    Config.LOGIN_URL, Config.EMAIL, Config.PASSWORD
+                ):
                     wait_time = await self.handle_error(Exception("Échec de connexion"))
                     await asyncio.sleep(wait_time)
                     continue
 
                 await self.navigate_to_page(Config.PLANNING_URL)
                 target_date = datetime.now() + timedelta(days=Config.TARGET_DAY_OFFSET)
-                logger.info(f"📅 Vérification pour le {target_date.strftime('%d/%m/%Y')}")
+                logger.info(
+                    f"📅 Vérification pour le {target_date.strftime('%d/%m/%Y')}"
+                )
 
                 try:
                     await self.select_month(target_date)
                     if not await self.select_date(target_date):
-                        wait_time = await self.handle_error(Exception("Impossible de sélectionner la date"))
+                        wait_time = await self.handle_error(
+                            Exception("Impossible de sélectionner la date")
+                        )
                         await asyncio.sleep(wait_time)
                         continue
                 except Exception as e:
@@ -429,14 +617,20 @@ class PlanningChecker:
                     self.reset_error_count()
                     self.db.set_planning_checked()
                     if Config.DISCORD_ENABLED:
-                        await self.discord_notifier.send_notification(target_date, activities)
+                        await self.discord_notifier.send_notification(
+                            target_date, activities
+                        )
                 else:
                     retry_interval = Config.RETRY_INTERVAL
-                    logger.info(f"🔄 Nouvelle vérification dans {retry_interval} secondes")
-                    for _ in tqdm(range(retry_interval),
-                                  desc="⏳ Prochaine vérification",
-                                  bar_format='{desc}: {n_fmt}/{total_fmt}s',
-                                  ncols=50):
+                    logger.info(
+                        f"🔄 Nouvelle vérification dans {retry_interval} secondes"
+                    )
+                    for _ in tqdm(
+                        range(retry_interval),
+                        desc="⏳ Prochaine vérification",
+                        bar_format="{desc}: {n_fmt}/{total_fmt}s",
+                        ncols=50,
+                    ):
                         await asyncio.sleep(1)
 
             except Exception as e:

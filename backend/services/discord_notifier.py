@@ -186,3 +186,32 @@ class DiscordNotifier:
         except Exception as e:
             self.logger.error(f"❌ Erreur lors de l'envoi de la notification de récupération: {str(e)}")
             self.logger.exception("Détails de l'erreur:")
+            
+    async def send_notification_custom(self, message_content, discord_name):
+        """Envoie une notification personnalisée à Discord"""
+        try:
+            self.logger.info(f"Préparation de la notification personnalisée pour {discord_name}")
+
+            if not self.webhook_url:
+                self.logger.error("URL du webhook Discord non configurée")
+                return
+
+            payload = {
+                "content": message_content,
+                "username": "BiscoteGirl",
+                "avatar_url": Config.BISCOTEGIRL_AVATAR_URL
+            }
+
+            self.logger.info("Envoi de la requête à Discord...")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(self.webhook_url, json=payload) as response:
+                    if response.status == 204:
+                        self.logger.info(f"✅ Notification personnalisée pour {discord_name} envoyée avec succès")
+                    else:
+                        self.logger.error(
+                            f"❌ Erreur lors de l'envoi de la notification ({response.status}): {await response.text()}"
+                        )
+
+        except Exception as e:
+            self.logger.error(f"❌ Erreur lors de l'envoi de la notification personnalisée: {str(e)}")
+            self.logger.exception("Détails de l'erreur:")
