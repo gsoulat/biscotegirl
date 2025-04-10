@@ -417,7 +417,7 @@ class PlanningChecker:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT rw.day, rw.activity_name, u.email, u.password, u.discord_name, u.id as user_id
+                    SELECT rw.day, rw.activity, u.email, u.password, u.discord_name, u.id as user_id
                     FROM reservations rw
                     JOIN users u ON rw.user_id = u.id
                     WHERE rw.day = ?
